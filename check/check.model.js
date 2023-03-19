@@ -3,6 +3,10 @@ import mongoose from 'mongoose'
 const checkSchema = new mongoose.Schema({
     name: String,
     url: String,
+    // path: {
+    //     type: String,
+    //     default: ''
+    // },
     method: {
         type: String,
         default: 'GET'
@@ -18,10 +22,6 @@ const checkSchema = new mongoose.Schema({
         type: Number,
         default: 5
     },
-    delaySeconds: {
-        type: Number,
-        default: 0
-    },
     intervalSeconds: {
         type: Number,
         default: 2
@@ -30,14 +30,14 @@ const checkSchema = new mongoose.Schema({
         type: Number,
         default: 1
     },
-    // retries: {
-    //     type: Number,
-    //     default: 0
-    // },
-    // retryDelaySeconds: {
-    //     type: Number,
-    //     default: 2
-    // },
+    retries: {
+        type: Number,
+        default: 0
+    },
+    retryDelaySeconds: {
+        type: Number,
+        default: 1
+    },
     validation: {
         status: {
             type: Number,
@@ -48,19 +48,4 @@ const checkSchema = new mongoose.Schema({
     // tags: Array,
 });
 
-const Check = mongoose.model('Check', checkSchema);
-
-export default { 
-    create(body) {
-        const check = new Check(body);
-        return check.save();
-    },
-    
-    list() {
-        return Check.find();
-    },
-
-    clear() {
-        return Check.deleteMany();
-    }
-}
+export const Check = mongoose.model('Check', checkSchema);

@@ -1,4 +1,4 @@
-import mongoose from 'mongoose'
+import mongoose, { ObjectId } from 'mongoose'
 
 const reportSchema = new mongoose.Schema({
     checkId: String,
@@ -8,17 +8,7 @@ const reportSchema = new mongoose.Schema({
     uptimeSeconds: Number,
     downtimeSeconds: Number,
     averageResponseTimeMillis: Number,
+    lastEventId: ObjectId,
 });
 
-const Report = mongoose.model('Event', reportSchema);
-
-export default { 
-    create(data) {
-        const check = new Report(data);
-        return check.save();
-    },
-    
-    list() {
-        return Report.find();
-    }
-}
+const Report = mongoose.model('Report', reportSchema);

@@ -1,4 +1,4 @@
-import CheckModel from './check.model.js'
+import { Check } from './check.model.js'
 
 export default {
   insert(req, res, next) {

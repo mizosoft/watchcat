@@ -3,31 +3,37 @@ import mongoose from 'mongoose'
 const statusSchema = new mongoose.Schema({
   checkId: {
     type: String,
-    index: true,
+    index: true
   },
   status: String,
   reason: String,
-  when: Date,
   responseTimeMillis: Number,
 }, {
+  timestamps: {
+    createdAt: 'when',
+    updatedAt: false // Statuses are never updated.
+  },
+  // timeseries: {
+  //   timeField: 'when',
+  //   metaField: 'checkId',
+  //   granularity: 'seconds'
+  // },
   statics: {
-    ok(checkId, responseTime) {
+    ok(checkId, responseTimeMillis) {
       return new Status({
         checkId: checkId,
         status: 'ok',
         reason: '',
-        when: Date.now(),
-        responseTime: responseTime
+        responseTimeMillis: responseTimeMillis
       })
     },
 
-    invalid(checkId, reason, responseTime) {
+    invalid(checkId, reason, responsetimeMillis) {
       return new Status({
         checkId: checkId,
         status: 'invalid',
         reason: reason,
-        when: Date.now(),
-        responseTime: responseTime
+        responseTimeMillis: responsetimeMillis
       })
     },
 
@@ -36,9 +42,13 @@ const statusSchema = new mongoose.Schema({
         checkId: checkId,
         status: 'error',
         reason: err.message,
-        when: Date.now(),
-        responseTime: -1
+        responseTimeMillis: -1
       })
+    }
+  },
+  methods: {
+    ok() {
+      return this.status == 'ok';
     }
   }
 });
