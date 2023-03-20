@@ -24,9 +24,9 @@ export async function start() {
   // await Status.deleteMany({});
 
   console.log('Restoring checks from last session.');
-  const cursor = Check.find().cursor();
+  const cursor = Check.find({ active: true }).cursor(); // Only interested in active checks.
   for (let check = await cursor.next(); check != null; check = await cursor.next()) {
-    Monitor.register(check);
+    Monitor.registerIfActive(check);
   }
 
   const app = express();

@@ -1,11 +1,11 @@
 import express from 'express';
-import url from 'node:url';
-import nodemailer from 'nodemailer';
 
 const app = express();
-app.get('/', (req, res) => {
+app.get('/:id', (req, res) => {
     console.log('Getting request');
+    console.log(req.query);
+    console.log(req.params);
     res.sendStatus(200);
 });
 
-app.listen(55557, () => console.log('Listening at 55557'));
+app.listen(56565, () => console.log('Listening at 56565'));

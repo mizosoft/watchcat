@@ -32,15 +32,17 @@ export class Monitor {
   }
 
   /* Creats & starts a new monitor for the given check. */
-  static register(check) {
-    const monitor = new Monitor(check);
-    monitor.incidents().subscribe(report => {
-      console.log('Incident ', report);
-      for (var [_, hook] of Object.entries(hooks)) {
-        hook(report); // No need to await.
-      }
-    });
-    monitor.start();
+  static registerIfActive(check) {
+    if (check.active && !Monitor.active[check.id]) {
+      const monitor = new Monitor(check);
+      monitor.incidents().subscribe(report => {
+        console.log('Incident ', report);
+        for (var [_, hook] of Object.entries(hooks)) {
+          hook(report); // No need to await.
+        }
+      });
+      monitor.start();
+    }
   }
 
   start() {
@@ -50,7 +52,7 @@ export class Monitor {
 
   stop() {
     this.stopNotifier.next(0);
-    delete active[this.check.id];
+    delete Monitor.active[this.check.id];
   }
 
   /* Returns a stream of reports for monitored URL's incidents (changes in status). */

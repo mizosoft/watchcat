@@ -14,6 +14,10 @@ const checkSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  active: {
+    type: Boolean, 
+    default: true
+  },
   protocol: String,
   path: String,
   port: {
