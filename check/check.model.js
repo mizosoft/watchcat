@@ -1,51 +1,79 @@
-import mongoose from 'mongoose'
+import mongoose from 'mongoose';
 
 const checkSchema = new mongoose.Schema({
-    name: String,
-    url: String,
-    // path: {
-    //     type: String,
-    //     default: ''
-    // },
-    method: {
-        type: String,
-        default: 'GET'
+  userId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  url: {
+    type: String,
+    required: true
+  },
+  protocol: String,
+  path: String,
+  port: {
+    type: Number,
+    default: -1
+  },
+  method: {
+    type: String,
+    default: 'GET'
+  },
+  headers: {
+    type: Map,
+    of: String,
+    default: {}
+  },
+  webhook: String,
+  timeoutSeconds: {
+    type: Number,
+    default: 5
+  },
+  intervalSeconds: {
+    type: Number,
+    default: 2
+  },
+  threshold: {
+    type: Number,
+    default: 1
+  },
+  authentication: new mongoose.Schema({
+    username: {
+      type: String,
+      required: true
     },
-    headers: {
-        type: Array,
-        default: {}
+    password: {
+      type: String,
+      required: true
     },
-    // protocol: String,
-    // port: Number,
-    // webhook: String,
-    timeoutSeconds: {
-        type: Number,
-        default: 5
-    },
-    intervalSeconds: {
-        type: Number,
-        default: 2
-    },
-    threshold: {
-        type: Number,
-        default: 1
-    },
-    retries: {
-        type: Number,
-        default: 0
-    },
-    retryDelaySeconds: {
-        type: Number,
-        default: 1
-    },
-    validation: {
-        status: {
-            type: Number,
-            default: 200
-        }
-    },
-    // ignoreSsl: Boolean, 
-    // tags: Array,
+  }, { _id: false }),
+  retries: {
+    type: Number,
+    default: 0
+  },
+  retryDelaySeconds: {
+    type: Number,
+    default: 1
+  },
+  validation: {
+    status: {
+      type: Number,
+      default: 200 // TODO better to make this a range (200-299) & perhaps use include/exclude rules.
+    }
+  },
+  ignoreSsl: {
+    type: Boolean,
+    default: false
+  },
+  tags: {
+    type: [String],
+    default: []
+  }
 });
 
 export const Check = mongoose.model('Check', checkSchema);

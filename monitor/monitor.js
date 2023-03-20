@@ -1,43 +1,11 @@
-import { catchError, delay, EMPTY, empty, timer } from 'rxjs'
-import axios from 'axios'
 import {
-  from, map, concatMap, repeat, tap, of, defer, retry, switchMap,
-  finalize, takeUntil, pairwise, mergeMap, share, startWith
+  map, repeat, switchMap, finalize, takeUntil, pairwise, mergeMap, share, EMPTY, startWith
 } from 'rxjs'
 import { Subject } from 'rxjs'
-import { Status } from '../status/status.model.js'
-
-function poll(check, signal) {
-  const start = Date.now();
-  console.log('Check url: ', check.url);
-  return defer(async () => {
-    const start = Date.now();
-    const response = await axios.request({
-      url: check.url,
-      method: check.method,
-      headers: check.headers,
-      timeout: check.timeoutSeconds * 1000,
-      signal
-    })
-    response.responseTimeMillis = Date.now() - start
-    return response;
-  }).pipe(
-    map(response => validate(check, response, response.responseTimeMillis)),
-    retry({
-      count: check.retries,
-      delay: check.retryDelaySeconds * 1000
-    }),
-    catchError(err => of(Status.error(check._id, err))),
-    concatMap(status => status.save()),
-    tap(status => console.log('Status: ', status)));
-}
-
-function validate(check, response, responseTime) {
-  // Currently supported validation is with resposne status.
-  return response.status == check.validation.status
-    ? Status.ok(check._id, responseTime)
-    : Status.invalid(`Invalid status code ${response.status}`, responseTime);
-}
+import { Status } from '../status/status.model.js';
+import { poll } from './poll.js';
+import { Report } from '../report/report.model.js';
+import * as hooks from '../hooks/index.js';
 
 export class Monitor {
   static active = new Map();
@@ -48,100 +16,91 @@ export class Monitor {
     this.stopNotifier = new Subject();
     this.poller = this.startNotifier.pipe(
       switchMap(() => {
-        console.log('Starting...');
+        console.log('Starting to monitor:', check.url);
         const abortController = new AbortController();
         return poll(check, abortController.signal).pipe(
           repeat({ delay: check.intervalSeconds * 1000 }),
           takeUntil(this.stopNotifier),
-          tap(status => this.lastStatus = status), // Save last status for creating incidents() sources based on current state.
-          finalize(() => abortController.abort()))
+          finalize(() => abortController.abort()),
+          finalize(() => console.log('Stopped monitoring: ', check.url)))
       }),
       share() // Make sure only one poller is active.
     );
 
     // Note that poller is never completed normally as startNotifier isn't.
-    this.poller.subscribe({ error: console.error });
+    this.poller.subscribe({ error: err => console.log('Poller terminated with an error ', err) });
+  }
+
+  /* Creats & starts a new monitor for the given check. */
+  static register(check) {
+    const monitor = new Monitor(check);
+    monitor.incidents().subscribe(report => {
+      console.log('Incident ', report);
+      for (var [_, hook] of Object.entries(hooks)) {
+        hook(report); // No need to await.
+      }
+    });
+    monitor.start();
   }
 
   start() {
-    console.log('Starting monitor...');
     this.startNotifier.next(0);
     Monitor.active[this.check.id] = this;
   }
 
   stop() {
-    console.log('Stopping monitor...');
     this.stopNotifier.next(0);
     delete active[this.check.id];
   }
 
+  /* Returns a stream of reports for monitored URL's incidents (changes in status). */
   incidents() {
-    // Generate incidents.
     return this.poller.pipe(
-      startWith(this.lastStatus),
+      map(status => ({ status })),
+      startWith(null),
       pairwise(),
-      mergeMap(([prevStatus, currStatus]) => {
-        // Emit a report if status changes.
-        const next = prevStatus && prevStatus.ok() != currStatus.ok()
-          ? this.generateReport(currStatus.when)
-          : EMPTY;
-        return next;
+      mergeMap(([prev, curr]) => {
+        // Store the number of continuous failures.
+        if (curr.status.ok()) {
+          curr.failures = 0;
+        } else {
+          curr.failures = 1 + ((prev && prev.failures) || 0);
+        }
+
+        // The second check ensures a report is generated if the url is unavailable from the first check.
+        curr.hasPendingChange = (prev && prev.hasPendingChange) || (!prev && !curr.status.ok());
+
+        // console.log(prev, curr);
+
+        // Generate a report if a change in status has occured or enough failures
+        // have occured since the last change in status.
+        let hasChange = prev && (prev.status.ok() != curr.status.ok());
+        if ((hasChange && (curr.status.ok() || this.check.threshold == 1))
+          || (curr.hasPendingChange && curr.failures >= this.check.threshold)) {
+          curr.hasPendingChange = false; // Consume.
+          return this.generateReport(curr.status.when);
+        } else {
+          curr.hasPendingChange |= hasChange;
+          return EMPTY;
+        }
       }));
   }
 
-  // Generates report for statuses upto a certain date.
+  /* Generates report for statuses upto a certain date, optionally including the full history of statuses. */
   generateReport(when = null, includeHistory = false) {
-    if (!when) {
-      when = Date.now();
-    }
-
     // TODO we can optimize this by storing the last generated report (perhaps generate reports hourly/daily)
-    // and only accumulate statuses after the time that report was generated.
-    return Status.find({ checkId: this.check.id, when: { $lte: when } })
+    // and only accumulate statuses after the time the last report was changed.
+    return Status.find({ checkId: this.check.id, when: { $lte: when || Date.now() } })
       .sort('when')
       .then(statuses => {
-        const report = {
-          checkId: this.check.id,
-          status: 'unknown',
-          modified: false,
-          availability: 0,
-          outages: 0,
-          uptimeSeconds: 0,
-          downtimeSeconds: 0,
-          averageResponseTimeMillis: 0
-        };
-
-        for (const status of statuses) {
-          console.log('Examining: ', status);
-          if (status.ok() != (report.status == 'ok')) { // A change in availability has occured.
-            report.modified = true;
-            if (!status.ok()) {
-              report.outages++;
-            }
-          }
-
-          report.status = status.status;
-          report.reason = status.reason;
-          report.averageResponseTimeMillis += status.responseTimeMillis;
-
-          if (report.when) {
-            const time = status.when - report.when; // Convert to seconds later.
-            if (status.ok()) {
-              report.uptimeSeconds += time;
-            } else {
-              report.downtimeSeconds += time;
-            }
-          } 
-          report.when = status.when;
-        }
-
-        report.uptimeSeconds = Math.round(report.uptimeSeconds / 1000);
-        report.downtimeSeconds = Math.round(report.downtimeSeconds / 1000);
-        report.availability = Math.round(100 * report.uptimeSeconds / (report.uptimeSeconds + report.downtimeSeconds)) / 100;
+        const report = new Report({ checkId: this.check.id });
+        report.populate(statuses);
+        const plainReport = report.toObject();
+        plainReport.ok = report.ok;
         if (includeHistory) {
-          report.history = statuses;
+          plainReport.history = statuses;
         }
-        return report;
+        return plainReport;
       });
   }
 }

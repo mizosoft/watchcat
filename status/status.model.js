@@ -25,7 +25,7 @@ const statusSchema = new mongoose.Schema({
         status: 'ok',
         reason: '',
         responseTimeMillis: responseTimeMillis
-      })
+      });
     },
 
     invalid(checkId, reason, responsetimeMillis) {
@@ -34,7 +34,7 @@ const statusSchema = new mongoose.Schema({
         status: 'invalid',
         reason: reason,
         responseTimeMillis: responsetimeMillis
-      })
+      });
     },
 
     error(checkId, err) {
@@ -43,7 +43,7 @@ const statusSchema = new mongoose.Schema({
         status: 'error',
         reason: err.message,
         responseTimeMillis: -1
-      })
+      });
     }
   },
   methods: {
