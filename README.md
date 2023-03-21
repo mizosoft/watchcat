@@ -4,12 +4,18 @@ A RESTful API for monitoring URLs & sending incident reports. Powered by NodeJS,
 
 ## Install & Run
 
-Run the following commands to start a local instance. Note that you need to have a proper MongoDB installation.
+First, start a MongoDB instance, assuming you have a proper installation.
+
+```bash
+mkdir -p db && mongod --dbpath db
+```
+
+Then run the following commands to start a local app instance.
 
 ```bash
 git clone https://github.com/mizosoft/watchcat
+cd webcat
 npm install
-mkdir -p db && mongod --dbpath db
 npm run dev
 ```
 
