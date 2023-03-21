@@ -14,11 +14,11 @@ services:
     restart: unless-stopped
     build: .
     ports:
-      - 50001:$APP_PORT
+      - $DOCKER_APP_PORT:$APP_PORT
     depends_on:
       - mongodb
     links:
       - mongodb
     environment:
-      - $DOCKER_APP_PORT=mongodb
+      - MONGODB_HOST=mongodb
       
