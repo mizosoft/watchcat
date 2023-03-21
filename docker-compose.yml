@@ -1,0 +1,24 @@
+version: "3"
+services:
+  mongodb:
+    container_name: mongo
+    image: mongo
+    restart: unless-stopped
+    volumes:
+      - ./db:/data/db
+    ports:
+      - 50000:$MONGODB_PORT  
+  watchcat:
+    container_name: watchcat
+    image: mizosoft/watchcat
+    restart: unless-stopped
+    build: .
+    ports:
+      - 50001:$APP_PORT
+    depends_on:
+      - mongodb
+    links:
+      - mongodb
+    environment:
+      - MONGODB_HOST=mongodb
+      
