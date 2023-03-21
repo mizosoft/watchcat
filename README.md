@@ -14,7 +14,7 @@ Then run the following commands to start a local app instance.
 
 ```bash
 git clone https://github.com/mizosoft/watchcat
-cd webcat
+cd watchcat
 npm install
 npm run dev
 ```
@@ -33,7 +33,7 @@ Docker port mappings can also be changed from `.env`.
 
 ## Usage
 
-The API is JWT-authenticated and a user must be created first to use the API. We'll use `curl` to sketch example requests. For simplicity, `$APP_URL` is used as a placeholder for the actual app URL (we'll assume we ran an `$APP_URL="http://localhost:8080"`), and `$TARGET_URL` will be used for some endpoint to be monitored.
+The API is JWT-authenticated and a user must be created first to use the API. We'll use `curl` to sketch example requests. For simplicity, `$APP_URL` is used as a placeholder for the actual app URL (we'll assume we ran `APP_URL="http://localhost:8080"`), and `$TARGET_URL` will be used for some endpoint to be monitored.
 
 ## Register
 
@@ -91,7 +91,7 @@ If the check ID is valid, a response with the updated check is returned.
 {"status":"ok","check":{"validation":{"status":200},"_id":"64193448f4b7be0f78169496","name":"Check #1","url":"http://localhost:50002/","active":false,"port":-1,"method":"GET","headers":{},"timeoutSeconds":5,"intervalSeconds":2,"threshold":1,"retries":0,"retryDelaySeconds":1,"ignoreSsl":false,"tags":[],"userId":"64193411f4b7be0f78169492","__v":0}}
 ```
 
-If we want to resume monitoring, we `PATCH` with `{active: true}`. `PATCH` can also be used to update any field, not just `active`.
+If we want to resume monitoring, we `PATCH` with `{"active": true}`. `PATCH` can also be used to update any field, not just `active`.
 
 ## Getting checks
 
@@ -139,7 +139,7 @@ export const hook = async (report) => {
   // Note that 'telegramId' needs to be added in the User model.
   const check = await Check.findById(report.checkId, ['name', 'url', 'userId']);
   const user = await User.findById(check.userId, 'telegramId');
-  if (check && user) {
+  if (user.telegramId) {
     // Format report & send a message (see hooks/email.js).
   }
 };
@@ -153,7 +153,7 @@ export { hook as webhook } from './webhook.js';
 
 ...
 
-export ( hook as telegramHook ) from './telegram.js';
+export { hook as telegramHook } from './telegram.js';
 ```
 
 And that's it!
@@ -170,6 +170,12 @@ Or for checks matching a given URL or a number of tags.
 
 ```bash
 curl "$APP_URL/reports?url=<url-encoded-url>&tag=a&tag=b" -H "Authorization: Bearer $TOKEN"
+```
+
+A full history of poll events can be included by passing a `history` url query parameter.
+
+```bash
+curl "$APP_URL/reports/$CHECK_ID?history" -H "Authorization: Bearer $TOKEN"
 ```
 
 ## TODO 
