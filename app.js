@@ -20,10 +20,6 @@ export async function start() {
 
   console.log('Connected to MongoDB');
 
-  // await User.deleteMany({});
-  // await Check.deleteMany({});
-  // await Status.deleteMany({});
-
   console.log('Restoring checks from last session.');
   const cursor = Check.find({ active: true }).cursor(); // Only interested in active checks.
   for (let check = await cursor.next(); check != null; check = await cursor.next()) {
@@ -43,7 +39,7 @@ export async function start() {
   app.use(checkRouter);
   app.use(reportRouter);
 
-  app.listen(config.port, () => console.log('Listening at ', config.port));
-
+  const server = app.listen(config.port, () => console.log('Listening at ', config.port));
+  app.locals.server = server;
   return app;
 }

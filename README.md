@@ -8,6 +8,7 @@ Run the following commands to start a local instance. Note that you need to have
 
 ```bash
 git clone https://github.com/mizosoft/watchcat
+npm install
 mkdir -p db && mongod --dbpath db
 npm run dev
 ```
@@ -168,5 +169,5 @@ curl "$APP_URL/reports?url=<url-encoded-url>&tag=a&tag=b" -H "Authorization: Bea
 ## TODO 
 
 - Error handling & validation of user data is currently not that great. Some errors or invalid values crash the app while others are logged in background. The latter should be always preferred in case of invalid user input.
-- More tests!
+- Unit tests!
 - Some performance optimization (see TODOs).
