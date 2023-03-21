@@ -7,7 +7,7 @@ services:
     volumes:
       - ./db:/data/db
     ports:
-      - 50000:$MONGODB_PORT  
+      - $DOCKER_MONGODB_PORT:$MONGODB_PORT  
   watchcat:
     container_name: watchcat
     image: mizosoft/watchcat
@@ -20,5 +20,5 @@ services:
     links:
       - mongodb
     environment:
-      - MONGODB_HOST=mongodb
+      - $DOCKER_APP_PORT=mongodb
       

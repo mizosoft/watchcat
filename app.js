@@ -1,6 +1,7 @@
 import express from 'express';
 import { router as userRouter } from './user/user.router.js';
 import { router as checkRouter } from './check/check.router.js';
+import { router as reportRouter } from './report/report.router.js';
 import { fromEnv } from './setup/config.js';
 import { Status } from './status/status.model.js';
 import { User } from './user/user.model.js';
@@ -40,6 +41,7 @@ export async function start() {
 
   app.use(userRouter);
   app.use(checkRouter);
+  app.use(reportRouter);
 
   app.listen(config.port, () => console.log('Listening at ', config.port));
 

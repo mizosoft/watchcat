@@ -6,6 +6,7 @@ import { Status } from '../status/status.model.js';
 import { poll } from './poll.js';
 import { Report } from '../report/report.model.js';
 import * as hooks from '../hooks/index.js';
+import { generateReport } from '../report/generator.js';
 
 export class Monitor {
   static active = new Map();
@@ -16,13 +17,13 @@ export class Monitor {
     this.stopNotifier = new Subject();
     this.poller = this.startNotifier.pipe(
       switchMap(() => {
-        console.log('Starting to monitor:', check.url);
+        console.log('Starting to monitor:', check.name);
         const abortController = new AbortController();
         return poll(check, abortController.signal).pipe(
           repeat({ delay: check.intervalSeconds * 1000 }),
           takeUntil(this.stopNotifier),
           finalize(() => abortController.abort()),
-          finalize(() => console.log('Stopped monitoring: ', check.url)))
+          finalize(() => console.log('Stopped monitoring: ', check.name)))
       }),
       share() // Make sure only one poller is active.
     );
@@ -31,7 +32,7 @@ export class Monitor {
     this.poller.subscribe({ error: err => console.log('Poller terminated with an error ', err) });
   }
 
-  /* Creats & starts a new monitor for the given check. */
+  /* Creats & starts a new monitor for the given check if active. */
   static registerIfActive(check) {
     if (check.active && !Monitor.active[check.id]) {
       const monitor = new Monitor(check);
@@ -80,29 +81,11 @@ export class Monitor {
         if ((hasChange && (curr.status.ok() || this.check.threshold == 1))
           || (curr.hasPendingChange && curr.failures >= this.check.threshold)) {
           curr.hasPendingChange = false; // Consume.
-          return this.generateReport(curr.status.when);
+          return generateReport(this.check, curr.status.when);
         } else {
           curr.hasPendingChange |= hasChange;
           return EMPTY;
         }
       }));
-  }
-
-  /* Generates report for statuses upto a certain date, optionally including the full history of statuses. */
-  generateReport(when = null, includeHistory = false) {
-    // TODO we can optimize this by storing the last generated report (perhaps generate reports hourly/daily)
-    // and only accumulate statuses after the time the last report was changed.
-    return Status.find({ checkId: this.check.id, when: { $lte: when || Date.now() } })
-      .sort('when')
-      .then(statuses => {
-        const report = new Report({ checkId: this.check.id });
-        report.populate(statuses);
-        const plainReport = report.toObject();
-        plainReport.ok = report.ok;
-        if (includeHistory) {
-          plainReport.history = statuses;
-        }
-        return plainReport;
-      });
   }
 }

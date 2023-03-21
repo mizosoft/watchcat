@@ -14,7 +14,7 @@ export function poll(check, signal) {
   const client = check.ignoreSsl ? insecureAxios : axios;
   return defer(async () => {
     const requestConfig = {
-      url: check.url,
+      url: check.resolveUrl(),
       method: check.method,
       headers: Object.fromEntries(check.headers),
       timeout: check.timeoutSeconds * 1000,
@@ -41,7 +41,7 @@ export function poll(check, signal) {
     // The latter shoudln't be wrapped in status but forwarded as is.
     catchError(err => of(Status.error(check.id, err))), 
     concatMap(status => status.save()),
-    tap(status => console.log(`Status (${check.url}): ${status}`)));
+    tap(status => console.log(`Status (${check.resolveUrl()}): ${status}`)));
 }
 
 function status(check, response, responseTime) {

@@ -15,7 +15,7 @@ const checkSchema = new mongoose.Schema({
     required: true
   },
   active: {
-    type: Boolean, 
+    type: Boolean,
     default: true
   },
   protocol: String,
@@ -77,6 +77,25 @@ const checkSchema = new mongoose.Schema({
   tags: {
     type: [String],
     default: []
+  }
+}, {
+  methods: {
+    resolveUrl() {
+      const url = new URL(this.url);
+      if (this.protocol) {
+        url.protocol = this.protocol;
+      }
+      if (this.path) {
+        url.pathname = this.path;
+      }
+      if (this.port >= 0) {
+        url.port = this.port;
+      }
+      if (!['http:', 'https:'].includes(url.protocol?.toLowerCase())) {
+        throw new Error('Invalid URL');
+      }
+      return url.toString();
+    }
   }
 });
 

@@ -20,9 +20,15 @@ router.post(
       } else {
         console.log('Creating new user: ' + JSON.stringify(req.body));
         const user = new User(req.body);
-        user.password = await bcrypt.hash(user.password, 10);
+        user.password = await bcrypt.hash("" + user.password, 10);
         await user.save();
-        res.send({ status: 'ok', token: jwtToken() });
+
+        const options = {};
+        if (res.locals.jwtExpiry) {
+          options.expiresIn = res.locals.jwtExpiry;
+        }
+        const token = jwt.sign({ userId: user.id }, res.locals.jwtSecret, options);
+        res.send({ status: 'ok', token });
       }
     })(req, res, next);
   });
@@ -34,17 +40,14 @@ router.post('/users/login', (req, res, next) => {
     }
 
     if (user) {
-      res.send({ status: 'ok', token: jwtToken() });
+      const options = {};
+      if (res.locals.jwtExpiry) {
+        options.expiresIn = res.locals.jwtExpiry;
+      }
+      const token = jwt.sign({ userId: user.id }, res.locals.jwtSecret, options);
+      res.send({ status: 'ok', token });
     } else {
       res.send({ status: 'failed', message: 'Invalid email or password.' });
     }
   })(req, res, next);
 });
-
-function jwtToken(user) {
-  const options = {};
-  if (res.locals.jwtExpiry) {
-    options.expiresIn = res.locals.jwtExpiry;
-  }
-  jwt.sign({ userId: user.id }, res.locals.jwtSecret, options);
-}

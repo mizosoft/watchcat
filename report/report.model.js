@@ -10,6 +10,10 @@ const reportSchema = new mongoose.Schema({
     type: String,
     default: 'unknown'
   },
+  reason: {
+    type: String,
+    deafult: '' 
+  },
   availability: {
     type: Number,
     default: 0
@@ -43,7 +47,7 @@ const reportSchema = new mongoose.Schema({
     /* Populates this report from a series of statuses. */
     populate(statuses) {
       for (const status of statuses) {
-        if (status.ok() != this.ok() && !this.ok()) {
+        if ((status.ok() != this.ok()) && !status.ok()) {
           this.outages++;
         }
 
